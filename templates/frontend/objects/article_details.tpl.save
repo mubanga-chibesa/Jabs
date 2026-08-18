@@ -1,0 +1,107 @@
+{**
+ * templates/frontend/objects/article_details.tpl
+ *
+ * Copyright (c) 2014-2021 Simon Fraser University
+ * Copyright (c) 2003-2021 John Willinsky
+ * Distributed under the GNU GPL v3. For full terms see the file docs/COPYING.
+ *
+ * @brief View of an Article which displays all details about the article.
+ *  Expected to be primary object on the page.
+ *}
+
+{**
+ * templates/frontend/objects/article_details.tpl
+ * Custom OJS article view template with reordered top fields.
+ *}
+
+{if !$heading}
+  {assign var="heading" value="h3"}
+{/if}
+<article class="obj_article_details">
+
+  {* Indicate if this is only a preview *}
+  {if $publication->getData('status') !== $smarty.const.STATUS_PUBLISHED}
+    <div class="cmp_notification notice">
+      {capture assign="submissionUrl"}{url page="workflow" op="access" path=$article->getId()}{/capture}
+      {translate key="submission.viewingPreview" url=$submissionUrl}
+    </div>
+  {elseif $currentPublication->getId() !== $publication->getId()}
+    <div class="cmp_notification notice">
+      {capture assign="latestVersionUrl"}{url page="article" op="view" path=$article->getBestId()}{/capture}
+      {translate key="submission.outdatedVersion"
+        datePublished=$publication->getData('datePublished')|date_format:$dateFormatShort
+        urlRecentVersion=$latestVersionUrl|escape
+      }
+    </div>
+  {/if}
+
+  {* 1. Title *}
+  <h1 class="page_title">
+    {$publication->getLocalizedTitle()|escape}
+  </h1>
+
+  {* 2. Authors *}
+  {if $publication->getData('authors')}
+    <section class="item authors">
+      <ul class="authors">
+        {foreach from=$publication->getData('authors') item=author}
+          <li>
+            <span class="name">{$author->getFullName()|escape}</span>
+          </li>
+        {/foreach}
+      </ul>
+    </section>
+  {/if}
+
+  {* 3. Published Date *}
+  {if $publication->getData('datePublished')}
+    <section class="item published">
+      <h2 class="label">{translate key="submissions.published"}</h2>
+      <div class="value">
+        <span>{$publication->getData('datePublished')|date_format:$dateFormatShort}</span>
+      </div>
+    </section>
+  {/if}
+
+  {* 4. DOI + 5. Crossmark *}
+  {foreach from=$pubIdPlugins item=pubIdPlugin}
+    {if $pubIdPlugin->getPubIdType() != 'doi'}
+      {continue}
+    {/if}
+    {assign var=pubId value=$article->getStoredPubId($pubIdPlugin->getPubIdType())}
+    {if $pubId}
+      {assign var=doiUrl value=$pubIdPlugin->getResolvingURL($currentJournal->getId(), $pubId)|escape}
+      <section class="item doi">
+        <h2 class="label">
+          {capture assign=translatedDOI}{translate key="plugins.pubIds.doi.readerDisplayName"}{/capture}
+          {translate key="semicolon" label=$translatedDOI}
+        </h2>
+        <span class="value">
+          <a href="{$doiUrl}" target="_blank" rel="noopener noreferrer">{$doiUrl}</a>
+        </span>
+
+        {* Crossmark integration *}
+        <div id="crossmark"></div>
+        <script src="https://crossmark.crossref.org/scripts/crossmark.min.js"></script>
+        <script type="text/javascript">
+          var crossmark_config = {
+            "custom_domain": "pdf",
+            "doi": "{$pubId}"
+          };
+        </script>
+      </section>
+    {/if}
+  {/foreach}
+
+  {* 6. Abstract *}
+  {if $publication->getLocalizedData('abstract')}
+    <section class="item abstract">
+      <h2 class="label">{translate key="article.abstract"}</h2>
+      {$publication->getLocalizedData('abstract')|strip_unsafe_html}
+    </section>
+  {/if}
+
+  {* The rest of the standard article details are below... *}
+  {include file="frontend/objects/article_details_rest.tpl"}
+
+</article>
